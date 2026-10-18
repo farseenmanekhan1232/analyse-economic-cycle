@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="fade-in">
+  <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: var(--space-4);">
+    <div>
+      <p class="label">SIP registry</p>
+      <h1 class="headline">Configure once</h1>
+      <p class="subhead">Each month the OS credits units from public NAV. No Groww XLSX export.</p>
+    </div>
+  </div>
+
+  <form method="post" action="/os/sips" class="card">
+    <p class="label">Add SIP</p>
+    <div class="form-grid" style="margin-top: var(--space-3);">
+      <label>Position
+        <select name="position_id" required>
+          {% for p in positions %}
+          {% if p.asset_class == 'mf' %}
+          <option value="{{ p.id }}">{{ p.instrument }}{% if not p.scheme_code %} (add scheme code!){% endif %}</option>
+          {% endif %}
+          {% endfor %}
+        </select>
+      </label>
+      <label>Amount ₹
+        <input name="amount" type="number" step="any" required placeholder="5000">
+      </label>
+      <label>SIP day (1–28)
+        <input name="sip_day" type="number" min="1" max="28" required value="5">
+      </label>
+      <label>Start date
+        <input name="start_date" type="date" required>
+      </label>
+    </div>
+    <button class="btn btn-sm" type="submit" style="margin-top: var(--space-4);">Save SIP</button>
+  </form>
+
+  {% if sips %}
+  <div class="card">
+    <p class="label">Active SIPs</p>
+    <table style="margin-top: var(--space-3);">
+      <thead>
+        <tr><th>Fund</th><th>Amount</th><th>Day</th><th>Start</th><th>Last credited</th><th></th></tr>
+      </thead>
+      <tbody>
+        {% for s in sips %}
+        <tr>
+          <td>{{ s.instrument }}
+            <div style="font-size: 11px; color: var(--text-tertiary);">{{ s.scheme_code or 'missing scheme code' }}</div>
+          </td>
+          <td class="mono">₹{{ "{:,.0f}".format(s.amount) }}</td>
+          <td class="mono">{{ s.sip_day }}</td>
+          <td class="mono">{{ s.start_date }}</td>
+          <td class="mono">{{ s.last_credited_date or '—' }}</td>
+          <td>
+            <form method="post" action="/os/sips/{{ s.id }}/deactivate" style="display:inline;">
+              <button class="btn btn-sm" type="submit" style="background: transparent; color: var(--red); border: 0.5px solid var(--border);">Stop</button>
+            </form>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card">
+    <p style="font-size: 14px; color: var(--text-secondary);">No SIPs yet. Create MF positions first, then register each SIP here once.</p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

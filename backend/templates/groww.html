@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="fade-in">
+  <p class="label">Optional</p>
+  <h1 class="headline">Groww sync</h1>
+  <p class="subhead">Stocks &amp; ETFs only. Mutual funds stay on SIP ledger + public NAV.</p>
+
+  <div class="card">
+    <p class="label">Status</p>
+    <p style="font-size: 14px; margin-top: var(--space-2); color: var(--text-secondary);">
+      {% if configured %}
+      Credentials present{% if last_sync %} · last sync {{ last_sync }}{% endif %}.
+      {% else %}
+      Not configured. Set API key + access token below, or env <span class="mono">GROWW_API_KEY</span> / <span class="mono">GROWW_ACCESS_TOKEN</span>.
+      {% endif %}
+    </p>
+  </div>
+
+  <form method="post" action="/os/groww/credentials" class="card">
+    <p class="label">Save credentials</p>
+    <div class="form-grid" style="margin-top: var(--space-3);">
+      <label>API key
+        <input name="api_key" required placeholder="Groww API key">
+      </label>
+      <label>Access token
+        <input name="access_token" required placeholder="Bearer access token">
+      </label>
+      <label>Expires at (optional ISO)
+        <input name="expires_at" placeholder="2026-12-31T00:00:00">
+      </label>
+    </div>
+    <button class="btn btn-sm" type="submit" style="margin-top: var(--space-4);">Save</button>
+  </form>
+
+  <form method="post" action="/os/groww/sync" class="card">
+    <p class="label">Sync equity holdings</p>
+    <p style="font-size: 13px; color: var(--text-secondary); margin: var(--space-2) 0;">
+      Creates or updates stock/ETF positions from Groww. Does not touch MF SIPs.
+    </p>
+    <button class="btn btn-sm" type="submit" {% if not configured %}disabled{% endif %}>Sync holdings</button>
+  </form>
+
+  {% if message %}
+  <div class="card inset"><p style="font-size: 14px;">{{ message }}</p></div>
+  {% endif %}
+  {% if synced %}
+  <div class="card">
+    <p class="label">Synced this run</p>
+    <ul style="list-style: none; margin-top: var(--space-2);">
+      {% for h in synced %}
+      <li style="font-size: 13px; padding: var(--space-1) 0;">{{ h.instrument }} · {{ h.units }} @ {{ h.last_nav }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,0 +1,143 @@
+{
+  "generated_at": "2026-07-17T23:42:45",
+  "mode": "groww_cache_full",
+  "interval": "day",
+  "cache": {
+    "cache_ready": true,
+    "n_symbols": 20,
+    "has_benchmark": true,
+    "manifest": {
+      "symbols": [
+        "AUTOBEES",
+        "PHARMABEES",
+        "HEALTHIETF",
+        "MOENERGY",
+        "MOREALTY",
+        "METALIETF",
+        "FMCGIETF",
+        "BANKBEES",
+        "ITBEES",
+        "INFRABEES",
+        "OILIETF",
+        "PSUBNKBEES",
+        "CONSUMBEES",
+        "NIFTY"
+      ],
+      "n": 14,
+      "primary_only": true,
+      "full_history": true,
+      "interval": "day",
+      "history_start": "2020-01-01",
+      "history_end": "2026-07-17",
+      "min_bars": 184,
+      "max_bars": 1624,
+      "groww_vendor_note": "Groww equity/index history from ~2020 only \u2014 not 20y. 15m is not the primary swing timeframe.",
+      "updated_at": "2026-07-17T23:09:02"
+    }
+  },
+  "manifest": {
+    "symbols": [
+      "AUTOBEES",
+      "PHARMABEES",
+      "HEALTHIETF",
+      "MOENERGY",
+      "MOREALTY",
+      "METALIETF",
+      "FMCGIETF",
+      "BANKBEES",
+      "ITBEES",
+      "INFRABEES",
+      "OILIETF",
+      "PSUBNKBEES",
+      "CONSUMBEES",
+      "NIFTY"
+    ],
+    "n": 14,
+    "primary_only": true,
+    "full_history": true,
+    "interval": "day",
+    "history_start": "2020-01-01",
+    "history_end": "2026-07-17",
+    "min_bars": 184,
+    "max_bars": 1624,
+    "groww_vendor_note": "Groww equity/index history from ~2020 only \u2014 not 20y. 15m is not the primary swing timeframe.",
+    "updated_at": "2026-07-17T23:09:02"
+  },
+  "capital": 100000.0,
+  "rebalance_every_n_days": 2,
+  "enabled_approaches": [
+    "trend_pullback",
+    "trend_breakout",
+    "defensive_mean_reversion",
+    "vol_compression_break"
+  ],
+  "with_cycle_filter": {
+    "total_return_pct": 5.52,
+    "win_rate": 61.5,
+    "expectancy_r": 0.581,
+    "max_drawdown_pct": 1.84,
+    "num_trades": 13,
+    "ending_capital": 105521.35,
+    "approach_stats": {
+      "trend_pullback": {
+        "num_trades": 6,
+        "win_rate": 33.3,
+        "expectancy_r": -0.109,
+        "total_pnl": -637.28
+      },
+      "trend_breakout": {
+        "num_trades": 3,
+        "win_rate": 100.0,
+        "expectancy_r": 1.484,
+        "total_pnl": 3312.04
+      },
+      "vol_compression_break": {
+        "num_trades": 4,
+        "win_rate": 75.0,
+        "expectancy_r": 0.94,
+        "total_pnl": 2886.74
+      }
+    }
+  },
+  "baseline_technicals_only": {
+    "total_return_pct": 3.91,
+    "win_rate": 58.6,
+    "expectancy_r": 0.274,
+    "max_drawdown_pct": 3.44,
+    "num_trades": 29,
+    "ending_capital": 103911.91,
+    "approach_stats": {
+      "defensive_mean_reversion": {
+        "num_trades": 3,
+        "win_rate": 66.7,
+        "expectancy_r": 0.667,
+        "total_pnl": 1380.2
+      },
+      "trend_pullback": {
+        "num_trades": 16,
+        "win_rate": 50.0,
+        "expectancy_r": -0.094,
+        "total_pnl": -1488.24
+      },
+      "trend_breakout": {
+        "num_trades": 5,
+        "win_rate": 100.0,
+        "expectancy_r": 1.257,
+        "total_pnl": 4727.96
+      },
+      "vol_compression_break": {
+        "num_trades": 5,
+        "win_rate": 40.0,
+        "expectancy_r": 0.232,
+        "total_pnl": 864.14
+      }
+    }
+  },
+  "cycle_edge_return_pct": 1.61,
+  "cycle_edge_expectancy_r": 0.307,
+  "notes": [
+    "Groww history from ~2020 only (vendor limit) \u2014 not 20 years.",
+    "Primary timeframe is daily; 15m is not used for this eval."
+  ],
+  "recommended_disable": []
+}

@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="fade-in">
+  <div style="display: flex; justify-content: space-between; align-items: baseline; gap: var(--space-4); flex-wrap: wrap;">
+    <div>
+      <p class="label">Position book</p>
+      <h1 class="headline">Open positions</h1>
+      <p class="subhead">Thesis, exits, and review dates — the living objects.</p>
+    </div>
+    <a class="btn btn-sm" href="/os/positions/new">Add position</a>
+  </div>
+
+  {% if positions %}
+  <div class="card">
+    <table>
+      <thead>
+        <tr>
+          <th>Instrument</th>
+          <th>Sleeve</th>
+          <th>P&amp;L</th>
+          <th>Days</th>
+          <th>Exit by</th>
+          <th>Status</th>
+          <th>Next</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in positions %}
+        <tr>
+          <td>
+            <a href="/os/positions/{{ p.id }}">{{ p.instrument }}</a>
+            <div style="font-size: 11px; color: var(--text-tertiary);">{{ p.sector or '—' }}</div>
+          </td>
+          <td>{{ p.sleeve }}</td>
+          <td class="{% if p.pnl_pct >= 0 %}positive{% else %}negative{% endif %}">{{ "%+.1f"|format(p.pnl_pct) }}%</td>
+          <td class="mono">{{ p.days_held }}</td>
+          <td class="mono">{{ p.exit_by_date or '—' }}</td>
+          <td><span class="traffic traffic-{{ p.traffic }}">{{ p.status }}</span></td>
+          <td style="font-size: 12px; color: var(--text-secondary);">{{ p.next_action }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card">
+    <p style="color: var(--text-secondary); font-size: 14px;">
+      Empty book. Add the funds/ETFs you bought from last month’s Pulse run.
+    </p>
+    <a class="btn" href="/os/positions/new" style="margin-top: var(--space-4);">Seed positions</a>
+  </div>
+  {% endif %}
+
+  {% if closed %}
+  <div class="card" style="margin-top: var(--space-4);">
+    <p class="label">Closed</p>
+    <table style="margin-top: var(--space-3);">
+      <thead>
+        <tr><th>Instrument</th><th>Outcome</th><th>Closed</th><th>P&amp;L</th></tr>
+      </thead>
+      <tbody>
+        {% for p in closed %}
+        <tr>
+          <td><a href="/os/positions/{{ p.id }}">{{ p.instrument }}</a></td>
+          <td style="font-size: 12px;">{{ p.outcome_tags or '—' }}</td>
+          <td class="mono">{{ p.closed_at or '—' }}</td>
+          <td class="{% if p.pnl_pct >= 0 %}positive{% else %}negative{% endif %}">{{ "%+.1f"|format(p.pnl_pct) }}%</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

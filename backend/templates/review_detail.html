@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="fade-in">
+  <p class="label"><a href="/os/review" style="color: var(--text-tertiary);">← Reviews</a></p>
+  <h1 class="headline">Review {{ review.review_date }}</h1>
+  <p class="subhead">{{ review.cycle_phase }} {% if review.cycle_sub_phase %}/ {{ review.cycle_sub_phase }}{% endif %}</p>
+
+  {% if review.notes %}
+  <div class="card">
+    <p class="label">Notes</p>
+    <p style="margin-top: var(--space-2); white-space: pre-wrap; font-size: 14px; color: var(--text-secondary);">{{ review.notes }}</p>
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <p class="label">Decisions</p>
+    <table style="margin-top: var(--space-3);">
+      <thead><tr><th>Position</th><th>Decision</th><th>Reason</th></tr></thead>
+      <tbody>
+        {% for d in review.decisions %}
+        <tr>
+          <td><a href="/os/positions/{{ d.position_id }}">{{ d.position_id }}</a></td>
+          <td>{{ d.decision }}</td>
+          <td style="font-size: 13px; color: var(--text-secondary);">{{ d.reason or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  {% if review.action_checklist %}
+  <div class="card">
+    <p class="label">Groww checklist</p>
+    <ul style="list-style: none; margin-top: var(--space-2);">
+      {% for c in review.action_checklist %}
+      <li style="padding: var(--space-2) 0; border-bottom: 0.5px solid rgba(255,255,255,0.04); font-size: 14px;">
+        <strong>{{ c.action }}</strong> {{ c.instrument }}{% if c.note %} — {{ c.note }}{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
