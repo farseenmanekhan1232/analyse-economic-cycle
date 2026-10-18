@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="fade-in">
+  <div class="headline" style="font-size: 22px;">Sector Performance</div>
+  <p class="subhead">Risk-adjusted returns by economic regime</p>
+
+  {% if error %}
+  <div class="card" style="border-color: var(--red);">
+    <p style="color: var(--red); font-size: 14px;">{{ error }}</p>
+  </div>
+  {% endif %}
+
+  {% if not sector_performance %}
+  <div class="card">
+    <div style="text-align: center; padding: var(--space-12) 0; color: var(--text-tertiary); font-size: 14px;">
+      Run the analysis to see sector data.
+    </div>
+  </div>
+  {% else %}
+
+  <div class="card" style="margin-bottom: var(--space-2);">
+    <div style="display: flex; align-items: center; gap: var(--space-3);">
+      <span style="font-size: 13px; color: var(--text-secondary);">Showing:</span>
+      <select id="regimeFilter" onchange="filterRegime(this.value)">
+        <option value="expansion" {% if current_regime == 'expansion' %}selected{% endif %}>Expansion</option>
+        <option value="contraction" {% if current_regime == 'contraction' %}selected{% endif %}>Contraction</option>
+        <option value="recovery" {% if current_regime == 'recovery' %}selected{% endif %}>Recovery</option>
+        <option value="trough" {% if current_regime == 'trough' %}selected{% endif %}>Trough</option>
+      </select>
+    </div>
+  </div>
+
+  {% for regime in ['expansion', 'contraction', 'recovery', 'trough'] %}
+  <div class="card regime-table" data-regime="{{ regime }}" {% if regime != current_regime %}style="display: none;"{% endif %}>
+    <div class="label" style="margin-bottom: var(--space-4);">{{ regime }}</div>
+    <div style="overflow-x: auto;">
+      <table>
+        <thead>
+          <tr>
+            <th>Sector</th>
+            <th>Return</th>
+            <th>Sharpe</th>
+            <th>Max DD</th>
+            <th>Win Rate</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for s in sector_performance | selectattr('regime', 'eq', regime) | list | sort(attribute='sharpe_ratio', reverse=True) %}
+          <tr>
+            <td style="font-weight: 500;">{{ s.sector }}</td>
+            <td class="{% if s.mean_return > 0 %}positive{% else %}negative{% endif %} mono">{{ "%+.1f"|format(s.mean_return) }}%</td>
+            <td class="{% if s.sharpe_ratio > 0.5 %}positive{% elif s.sharpe_ratio < -0.5 %}negative{% endif %} mono">{{ "%.2f"|format(s.sharpe_ratio) }}</td>
+            <td class="negative mono">{{ "%.1f"|format(s.max_drawdown) }}%</td>
+            <td class="mono">{{ "%.0f"|format(s.win_rate * 100) }}%</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+  {% endfor %}
+
+  {% endif %}
+</div>
+
+<footer class="footer">Pulse &middot; Economic cycle analysis for Indian markets</footer>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function filterRegime(regime) {
+  document.querySelectorAll('.regime-table').forEach(el => {
+    el.style.display = el.dataset.regime === regime ? '' : 'none';
+  });
+}
+</script>
+{% endblock %}

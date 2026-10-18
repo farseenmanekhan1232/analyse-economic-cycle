@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="fade-in">
+  <p class="label">Monthly ritual</p>
+  <h1 class="headline">Review wizard</h1>
+  <p class="subhead">Keep / trim / exit each open position. Leave with a Groww checklist.</p>
+
+  {% if message %}
+  <div class="card inset" style="border-color: var(--green); margin-bottom: var(--space-4);">
+    <p style="font-size: 14px;">{{ message }}</p>
+    {% if checklist %}
+    <p class="label" style="margin-top: var(--space-4);">Do this on Groww today</p>
+    <ul style="margin-top: var(--space-2); list-style: none;">
+      {% for c in checklist %}
+      <li style="font-size: 13px; padding: var(--space-2) 0; border-bottom: 0.5px solid rgba(255,255,255,0.04);">
+        <strong>{{ c.action }}</strong> {{ c.instrument }}{% if c.note %} — {{ c.note }}{% endif %}
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <p class="label">1 · Snapshot</p>
+    <p style="font-size: 14px; margin-top: var(--space-2);">
+      Book value ₹{{ "{:,.0f}".format(summary.total_value) }} · P&amp;L {{ "%+.1f"|format(summary.pnl_pct) }}%
+      · Satellite {{ summary.satellite_pct }}%
+    </p>
+    {% if last_review %}
+    <p style="font-size: 12px; color: var(--text-tertiary); margin-top: var(--space-2);">Last review: {{ last_review }}</p>
+    {% endif %}
+  </div>
+
+  <div class="card">
+    <p class="label">2 · Cycle (optional)</p>
+    <p style="font-size: 14px; margin-top: var(--space-2);">
+      {% if current_phase %}
+      Phase <strong>{{ current_phase }}</strong> / {{ current_sub_phase or '—' }}
+      {% else %}
+      No cached cycle — <a href="/dashboard">run analysis</a> if you want phase context.
+      {% endif %}
+    </p>
+  </div>
+
+  {% if positions %}
+  <form method="post" action="/os/review" class="card">
+    <p class="label">3 · Each position</p>
+    {% for p in positions %}
+    <div style="padding: var(--space-4) 0; border-bottom: 0.5px solid rgba(255,255,255,0.06);">
+      <div style="display: flex; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap;">
+        <div>
+          <a href="/os/positions/{{ p.id }}" style="font-weight: 500;">{{ p.instrument }}</a>
+          <div style="font-size: 12px; color: var(--text-tertiary);">
+            {{ "%+.1f"|format(p.pnl_pct) }}% · day {{ p.days_held }} · exit {{ p.exit_by_date or '—' }}
+            · <span class="traffic traffic-{{ p.traffic }}">{{ p.status }}</span>
+          </div>
+        </div>
+        <select name="decision_{{ p.id }}">
+          <option value="keep" selected>Keep</option>
+          <option value="trim">Trim</option>
+          <option value="exit">Exit</option>
+          <option value="extend">Extend horizon</option>
+        </select>
+      </div>
+      <input name="reason_{{ p.id }}" placeholder="One-line reason" style="margin-top: var(--space-2); width: 100%;">
+    </div>
+    {% endfor %}
+
+    <p class="label" style="margin-top: var(--space-6);">4 · Notes</p>
+    <textarea name="notes" rows="3" placeholder="Optional journal note for this review" style="margin-top: var(--space-2);"></textarea>
+
+    <button class="btn" type="submit" style="margin-top: var(--space-6);">5 · Save review &amp; Groww checklist</button>
+  </form>
+  {% else %}
+  <div class="card">
+    <p style="color: var(--text-secondary);">No open positions to review. <a href="/os/positions/new">Add some</a> first.</p>
+  </div>
+  {% endif %}
+
+  {% if reviews %}
+  <div class="card">
+    <p class="label">Past reviews</p>
+    <table style="margin-top: var(--space-3);">
+      <thead><tr><th>Date</th><th>Phase</th><th>Notes</th></tr></thead>
+      <tbody>
+        {% for r in reviews %}
+        <tr>
+          <td class="mono"><a href="/os/review/{{ r.id }}">{{ r.review_date }}</a></td>
+          <td>{{ r.cycle_sub_phase or r.cycle_phase or '—' }}</td>
+          <td style="font-size: 12px; color: var(--text-secondary);">{{ (r.notes or '')[:80] }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

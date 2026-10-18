@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Analyzing — Pulse</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+  <style>
+    .progress-wrap { width: 320px; margin: 0 auto var(--space-6); }
+    .progress-track { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
+    .progress-fill { height: 100%; background: var(--accent); border-radius: 2px; transition: width 0.3s ease; width: 0; }
+    .step-text { font-size: 14px; color: var(--text-secondary); text-align: center; min-height: 20px; }
+    .pct { font-size: 24px; font-weight: 600; color: var(--text-primary); margin-bottom: var(--space-2); }
+  </style>
+</head>
+<body style="display: flex; align-items: center; justify-content: center; min-height: 100vh; background: var(--bg-primary);">
+  <div style="text-align: center; width: 360px;">
+    <div class="pct" id="pct">0%</div>
+    <div class="progress-wrap">
+      <div class="progress-track">
+        <div class="progress-fill" id="bar"></div>
+      </div>
+    </div>
+    <div class="step-text" id="step">Starting analysis...</div>
+  </div>
+
+  <script>
+    const jobId = "{{ job_id }}";
+    function poll() {
+      fetch('/api/pipeline/status/' + jobId)
+        .then(r => r.json())
+        .then(data => {
+          document.getElementById('bar').style.width = (data.progress * 100) + '%';
+          document.getElementById('pct').textContent = Math.round(data.progress * 100) + '%';
+          document.getElementById('step').textContent = data.step;
+
+          if (data.error) {
+            document.getElementById('bar').style.background = 'var(--red)';
+            document.getElementById('step').textContent = data.error;
+            document.getElementById('step').style.color = 'var(--red)';
+            document.getElementById('pct').innerHTML = '<a href="/dashboard" style="font-size:14px;">Back to dashboard</a>';
+            return;
+          }
+          if (data.done) {
+            window.location.href = '/dashboard';
+            return;
+          }
+          setTimeout(poll, 1500);
+        })
+        .catch(() => {
+          document.getElementById('step').textContent = 'Connection lost. Retrying...';
+          setTimeout(poll, 3000);
+        });
+    }
+    poll();
+  </script>
+</body>
+</html>

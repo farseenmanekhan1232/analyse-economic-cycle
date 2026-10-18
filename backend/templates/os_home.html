@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="fade-in">
+  <p class="label">Pulse OS</p>
+  <h1 class="headline">What needs me today?</h1>
+  <p class="subhead">Open book first. Cycle scores second.</p>
+
+  {% if alerts %}
+  <div class="card inset" style="border-color: var(--orange); margin-bottom: var(--space-4);">
+    <p class="label">Alerts</p>
+    <ul style="list-style: none; margin-top: var(--space-2);">
+      {% for a in alerts %}
+      <li style="font-size: 13px; color: var(--text-secondary); padding: var(--space-1) 0;">{{ a }}</li>
+      {% endfor %}
+    </ul>
+  </div>
+  {% endif %}
+
+  <div class="grid-2" style="margin-bottom: var(--space-4);">
+    <div class="card">
+      <p class="label">Portfolio</p>
+      <p class="mono" style="font-size: 22px; font-weight: 600; margin-top: var(--space-2);">₹{{ "{:,.0f}".format(summary.total_value) }}</p>
+      <p style="font-size: 13px; color: {% if summary.pnl >= 0 %}var(--green){% else %}var(--red){% endif %};">
+        {{ "%+.1f"|format(summary.pnl_pct) }}% · invested ₹{{ "{:,.0f}".format(summary.total_invested) }}
+      </p>
+      <p style="font-size: 12px; color: var(--text-tertiary); margin-top: var(--space-2);">
+        Core {{ summary.core_pct }}% · Satellite {{ summary.satellite_pct }}%
+      </p>
+    </div>
+    <div class="card">
+      <p class="label">Open positions</p>
+      <p class="mono" style="font-size: 22px; font-weight: 600; margin-top: var(--space-2);">{{ summary.position_count }}</p>
+      <p style="font-size: 13px; color: var(--text-secondary);">{{ attention|length }} need attention</p>
+      <div style="margin-top: var(--space-3); display: flex; gap: var(--space-2); flex-wrap: wrap;">
+        <a class="btn btn-sm" href="/os/review">Monthly review</a>
+        <a class="btn btn-sm" href="/os/positions/new" style="background: var(--bg-elevated); color: var(--text-primary); border: 0.5px solid var(--border);">Add position</a>
+      </div>
+    </div>
+  </div>
+
+  {% if attention %}
+  <div class="card">
+    <p class="label">Needs attention</p>
+    <table style="margin-top: var(--space-3);">
+      <thead>
+        <tr>
+          <th>Instrument</th>
+          <th>Status</th>
+          <th>P&amp;L</th>
+          <th>Exit by</th>
+          <th>Action</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for p in attention %}
+        <tr>
+          <td><a href="/os/positions/{{ p.id }}">{{ p.instrument }}</a>
+            <div style="font-size: 11px; color: var(--text-tertiary);">{{ p.sector or '—' }} · {{ p.sleeve }}</div>
+          </td>
+          <td><span class="traffic traffic-{{ p.traffic }}">{{ p.status }}</span></td>
+          <td class="{% if p.pnl_pct >= 0 %}positive{% else %}negative{% endif %}">{{ "%+.1f"|format(p.pnl_pct) }}%</td>
+          <td class="mono">{{ p.exit_by_date or '—' }}</td>
+          <td style="font-size: 12px; color: var(--text-secondary);">{{ p.next_action }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="card">
+    <p style="font-size: 14px; color: var(--text-secondary);">
+      {% if summary.position_count == 0 %}
+      No open positions yet. <a href="/os/positions/new">Seed last month’s Pulse buys</a> so the OS owns your book.
+      {% else %}
+      Nothing urgent. All open positions are within plan.
+      {% endif %}
+    </p>
+  </div>
+  {% endif %}
+
+  {% if calibration.total_closed %}
+  <div class="card">
+    <p class="label">Calibration (closed trades)</p>
+    <p style="font-size: 13px; color: var(--text-secondary); margin-top: var(--space-2);">
+      {{ calibration.total_closed }} closed ·
+      {% for tag, n in calibration.tags.items() %}{{ tag }}: {{ n }}{% if not loop.last %} · {% endif %}{% endfor %}
+      {% if calibration.exited_late %} · exited late: {{ calibration.exited_late }}{% endif %}
+    </p>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

@@ -1,6 +1,29 @@
-# Indian Stock Market Economic Cycle Analysis
+# Pulse Decision OS
 
-**A Python-based tool for analyzing economic cycles, recommending investment sectors, predicting future growth sectors, and suggesting top mutual funds.**
+Personal decision loop: versioned analysis runs → diff vs open holdings → Groww checklist → sync truth back.
+
+| Screen | URL |
+|--------|-----|
+| Today | http://localhost:3000/ |
+| Portfolio | http://localhost:3000/holdings |
+| Research | http://localhost:3000/swing |
+| Data | http://localhost:3000/sync |
+
+```bash
+./dev.sh          # API :8000 + UI :3000 together (Ctrl+C stops both)
+
+# or separately:
+uvicorn backend.api.server:app --reload --host 127.0.0.1 --port 8000
+cd apps/web && npm run dev
+```
+
+DB: `data/pulse_decision.db` (Alembic: `alembic upgrade head`). Legacy Jinja cycle lab: `/legacy`. Old Vite SIP/satellite/review UI redirects here.
+
+---
+
+# Indian Stock Market Economic Cycle Analysis (engines)
+
+**Python cycle brain: Kite sector indices, regime/sector scores, fund heuristics — consumed by Decision OS.**
 
 ---
 

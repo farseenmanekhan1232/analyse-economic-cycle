@@ -1,0 +1,328 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="fade-in">
+
+{% if not summary %}
+  <div class="headline">Sector Performance by Economic Cycle</div>
+  <p class="subhead">Click "Run Analysis" to see where to invest.</p>
+  <div style="background: var(--bg-surface); border: 0.5px solid var(--border); border-radius: var(--radius-lg); padding: var(--space-12); text-align: center;">
+    <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: var(--space-6);">
+      Analyze 15 Nifty sectors across expansion &amp; contraction phases to find the best opportunities.
+    </p>
+    <button class="btn" onclick="runPipeline()">Run Analysis</button>
+  </div>
+
+{% else %}
+
+  {% if open_position_count %}
+  <div class="card inset" style="border-color: var(--orange); margin-bottom: var(--space-4);">
+    <p style="font-size: 13px; color: var(--text-secondary);">
+      You have <strong>{{ open_position_count }}</strong> open satellite positions from prior runs.
+      Review them in <a href="http://127.0.0.1:5173/">Pulse OS</a> before acting on new scores.
+    </p>
+  </div>
+  {% endif %}
+
+  <!-- HEADLINE -->
+  <div class="headline" style="font-size: 22px;">{{ market_story }}</div>
+  <p class="subhead">{{ risk_label }} &middot; Updated {{ last_run or 'never' }}</p>
+
+  <!-- CHARTS ROW -->
+  <div class="grid-2">
+    <div class="card">
+      <div class="label" style="margin-bottom: var(--space-3);">Where We Are</div>
+      <div style="display: flex; align-items: center; gap: var(--space-6);">
+        <div style="width: 160px; height: 120px;">
+          <canvas id="cycleGauge"></canvas>
+        </div>
+        <div>
+          <div style="font-size: 20px; font-weight: 700; color: {{ 'var(--green)' if current_phase == 'expansion' else 'var(--red)' }};">
+            {{ sub_phase.replace('_', ' ') | title }}
+          </div>
+          <div style="font-size: 13px; color: var(--text-secondary);">
+            {{ cycle_gauge.get('progress_pct', 0) }}% through cycle
+          </div>
+          {% if phase_progress > 0.7 %}
+          <div style="font-size: 12px; color: var(--orange); margin-top: var(--space-1);">
+            Late stage — be selective
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="label" style="margin-bottom: var(--space-3);">Phase History</div>
+      {% if phase_history %}
+      <div class="chart-wrap" style="min-height: 140px;">
+        <canvas id="phaseTimeline"></canvas>
+      </div>
+      {% else %}
+      <div style="padding: var(--space-6); color: var(--text-tertiary); text-align: center;">Data will appear after analysis</div>
+      {% endif %}
+    </div>
+  </div>
+
+  <!-- SIGNAL BARS -->
+  {% if signals %}
+  <div class="card">
+    <div class="label" style="margin-bottom: var(--space-3);">What the Data Says</div>
+    {% for name, sig in signals.items() %}
+    <div style="display: flex; align-items: center; gap: var(--space-3); margin-bottom: var(--space-2);">
+      <span style="width: 100px; font-size: 12px; color: var(--text-secondary);">{{ sig.name }}</span>
+      <div style="flex: 1; height: 14px; background: var(--bg-elevated); border-radius: 3px; overflow: hidden;">
+        <div style="height: 100%; border-radius: 3px; width: {{ (sig.confidence * 100) | round }}%;
+          background: {% if sig.direction == 'bullish' %}var(--green){% elif sig.direction == 'bearish' %}var(--red){% else %}var(--text-tertiary){% endif %};"></div>
+      </div>
+      <span style="width: 50px; font-size: 11px; font-weight: 600; text-align: right;
+        color: {% if sig.direction == 'bullish' %}var(--green){% elif sig.direction == 'bearish' %}var(--red){% else %}var(--text-tertiary){% endif %};">{{ sig.direction | upper }}</span>
+      <span class="mono" style="font-size: 11px; color: var(--text-tertiary);">{{ "%.0f"|format(sig.confidence * 100) }}%</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  <!-- SECTOR HEATMAP -->
+  {% if sector_matrix %}
+  <div class="card">
+    <div class="label" style="margin-bottom: var(--space-4);">Sector Phase Performance</div>
+    <div style="overflow-x: auto;">
+      <table class="heatmap">
+        <thead>
+          <tr>
+            <th>Sector</th>
+            {% for p in matrix_phases %}
+            <th {% if p == current_phase %}class="current-phase-col"{% endif %}>{{ matrix_labels.get(p, p) }}</th>
+            {% endfor %}
+            <th>3-Month</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for sector_key, phase_data in sector_matrix.items() %}
+          {% set recent_val = summary | selectattr('sector', 'eq', sector_key) | map(attribute='recent') | first | default(0) %}
+          <tr>
+            <td style="font-weight: 500;">{{ sector_key }}</td>
+            {% for p in matrix_phases %}
+            {% set cell = phase_data.get(p, {}) %}
+            {% if cell is mapping %}
+            <td class="heatmap-cell {% if p == current_phase %}current-phase-col{% endif %}"
+                style="background: {{ cell.get('color', 'transparent') }}">
+              {{ "%+.1f"|format(cell.get('return', 0)) }}%
+            </td>
+            {% else %}
+            <td class="heatmap-cell {% if p == current_phase %}current-phase-col{% endif %}">
+              {{ "%.1f"|format(cell) }}%
+            </td>
+            {% endif %}
+            {% endfor %}
+            <td class="heatmap-cell">{% if recent_val %}{{ "%+.1f"|format(recent_val * 100) }}%{% else %}--{% endif %}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    <div style="font-size: 11px; color: var(--text-tertiary); margin-top: var(--space-2); text-align: right;">
+      Green = positive returns &middot; Red = negative &middot; Highlighted column = current phase
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- MAIN TABLE -->
+  <div class="card" style="margin-bottom: var(--space-4);">
+    <div class="label" style="margin-bottom: var(--space-3); cursor: pointer;" onclick="document.getElementById('detailTable').classList.toggle('hidden');">
+      Detailed Scores &#9662;
+    </div>
+    <div id="detailTable" class="hidden">
+      <div style="overflow-x: auto;">
+        <table>
+          <thead>
+            <tr>
+              <th>Sector</th>
+              <th></th>
+              <th>Why</th>
+              <th>Score</th>
+              <th>Return</th>
+              <th>Hold</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in summary %}
+            <tr>
+              <td style="font-weight: 500;">{{ row.sector }}</td>
+              <td>
+                {% if row.rating == 'Top Pick' %}
+                  <span style="color: var(--green); font-size: 11px; font-weight: 700;">{{ row.rating }}</span>
+                {% elif row.rating == 'Buy' %}
+                  <span style="color: var(--green); font-size: 11px; font-weight: 500;">{{ row.rating }}</span>
+                {% elif row.rating == 'Hold' %}
+                  <span style="color: var(--yellow); font-size: 11px;">{{ row.rating }}</span>
+                {% else %}
+                  <span style="color: var(--text-tertiary); font-size: 11px;">{{ row.rating }}</span>
+                {% endif %}
+              </td>
+              <td style="font-size: 12px; color: var(--text-secondary); max-width: 280px;">{{ row.why }}</td>
+              <td class="mono" style="font-weight: 600; color: {% if row.score >= 70 %}var(--green){% elif row.score >= 50 %}var(--yellow){% else %}var(--text-tertiary){% endif %};">{{ row.score }}</td>
+              <td class="mono {% if row.recent > 0 %}positive{% else %}negative{% endif %}">{{ "%+.1f"|format(row.recent * 100) }}%</td>
+              <td class="mono" style="font-size: 12px; color: var(--text-secondary);">{{ row.hold_for }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- INVESTMENT CALCULATOR -->
+  {% if investments %}
+  <div class="card">
+    <div class="label" style="margin-bottom: var(--space-4);">How to Invest</div>
+    <div style="display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap; margin-bottom: var(--space-4);">
+      <span style="font-size: 14px; color: var(--text-secondary);">Your capital:</span>
+      <input type="text" id="capitalInput" value="100000"
+        style="background: var(--bg-elevated); border: 0.5px solid var(--border); border-radius: var(--radius); color: var(--text-primary); font-size: 16px; padding: var(--space-2) var(--space-4); width: 140px;"
+        oninput="this.value = this.value.replace(/[^0-9]/g,''); updateAllocation();">
+      <span style="font-size: 14px; color: var(--text-secondary);">INR</span>
+    </div>
+    <div id="allocResults">
+      {% for inv in investments %}
+      <div class="alloc-row" data-sector="{{ inv.sector }}" data-pct="{{ inv.pct }}" style="display: flex; align-items: center; gap: var(--space-2); margin-bottom: var(--space-2);">
+        <span style="width: 80px; text-align: right; font-size: 13px;">{{ inv.sector }}</span>
+        <div style="flex: 1; height: 22px; background: var(--bg-elevated); border-radius: 4px; overflow: hidden;">
+          <div style="height: 100%; border-radius: 4px; width: {{ (inv.pct * 100) | round }}%; background: var(--accent);"></div>
+        </div>
+        <span style="width: 45px; font-size: 12px; color: var(--text-secondary); text-align: right;">{{ "%.1f"|format(inv.pct * 100) }}%</span>
+        <span class="alloc-amount mono" style="width: 100px; font-size: 13px; color: var(--green); text-align: right;">₹{{ "%.0f"|format(inv.pct * 100000) }}</span>
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+  <!-- FUND PICKS -->
+  {% if fund_picks %}
+  <div class="card">
+    <div class="label" style="margin-bottom: var(--space-3); cursor: pointer;" onclick="document.getElementById('fundBody').classList.toggle('hidden');">
+      Fund Picks &#9662;
+    </div>
+    <div id="fundBody" class="hidden" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: var(--space-4);">
+      {% for sector_key, picks in fund_picks.items() %}
+        {% if picks.etfs or picks.mfs %}
+        <div>
+          <div style="font-size: 13px; font-weight: 600; margin-bottom: var(--space-2);">{{ sector_key | replace('_', ' ') }}</div>
+          {% for e in picks.etfs %}
+          <div class="signal-row" style="padding: var(--space-1) 0; border: none;">
+            <span style="font-size: 12px; color: var(--text-secondary);">{{ e.name }}</span>
+            <span class="signal-badge" style="font-size: 9px; background: rgba(0,212,170,0.12); color: var(--accent);">ETF</span>
+            <span class="mono" style="font-size: 12px;">{% if e.ltp %}₹{{ "%.2f"|format(e.ltp) }}{% else %}--{% endif %}</span>
+          </div>
+          {% endfor %}
+          {% for m in picks.mfs %}
+          <div class="signal-row" style="padding: var(--space-1) 0; border: none;">
+            <span style="font-size: 12px; color: var(--text-secondary);">{{ m.name }}</span>
+            <span class="signal-badge" style="font-size: 9px; background: rgba(59,130,246,0.12); color: var(--blue);">MF</span>
+            <span class="mono" style="font-size: 12px;">{% if m.nav %}₹{{ "%.2f"|format(m.nav) }}{% else %}--{% endif %}</span>
+          </div>
+          {% endfor %}
+        </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+  </div>
+  {% endif %}
+
+
+{% endif %}
+
+  <div style="display: flex; justify-content: space-between; align-items: center; margin-top: var(--space-4);">
+    {% if summary %}<a href="/sectors">All sectors by regime &rarr;</a>{% else %}<span></span>{% endif %}
+    <button id="refreshBtn" class="btn btn-sm" onclick="runPipeline()">{% if summary %}Refresh{% else %}Run Analysis{% endif %}</button>
+  </div>
+</div>
+
+<footer class="footer">Data: Kite Connect &middot; Yahoo Finance &middot; Updated {{ last_run or 'never' }}</footer>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function runPipeline() {
+  var btn = document.getElementById('refreshBtn');
+  btn.textContent = '...';
+  btn.disabled = true;
+  fetch('/api/run-pipeline', { method: 'POST' })
+    .then(r => {
+      if (r.status === 401) { window.location.href = '/login'; return; }
+      return r.json();
+    })
+    .then(data => {
+      if (data && data.job_id) window.location.href = '/loading?job=' + data.job_id;
+    })
+    .catch(() => { btn.textContent = 'Try again'; btn.disabled = false; });
+}
+
+function updateAllocation() {
+  var capital = parseFloat(document.getElementById('capitalInput').value) || 0;
+  document.getElementById('capitalInput').value = capital.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '');
+  document.querySelectorAll('.alloc-row').forEach(function(row) {
+    var pct = parseFloat(row.dataset.pct);
+    var amount = row.querySelector('.alloc-amount');
+    if (amount) amount.textContent = '\u20B9' + Math.round(capital * pct).toLocaleString('en-IN');
+  });
+}
+
+{% if cycle_gauge and cycle_gauge.phases %}
+(function() {
+  var phases = {{ cycle_gauge.phases | tojson }};
+  var current = '{{ cycle_gauge.current_phase }}';
+  var idx = current.indexOf('late') >= 0 ? 2 : current.indexOf('early') >= 0 ? 1 : current.indexOf('contraction') >= 0 ? 3 : 1;
+  new Chart(document.getElementById('cycleGauge'), {
+    type: 'doughnut',
+    data: {
+      datasets: [{
+        data: [25, 25, 25, 25],
+        backgroundColor: ['#3b82f6', '#22c55e', '#eab308', '#ef4444'],
+        borderWidth: 0,
+        circumference: 180,
+        rotation: 270,
+      }]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { tooltip: { enabled: false }, legend: { display: false } },
+    }
+  });
+})();
+{% endif %}
+
+{% if phase_history %}
+(function() {
+  var data = {{ phase_history | tojson }};
+  var labels = [], expansion = [], contraction = [];
+  data.forEach(function(d) {
+    labels.push(d.date.substring(0, 7));
+    expansion.push(d.phase === 'expansion' ? 1 : 0);
+    contraction.push(d.phase === 'contraction' ? 1 : 0);
+  });
+  new Chart(document.getElementById('phaseTimeline'), {
+    type: 'bar',
+    data: {
+      labels: labels,
+      datasets: [
+        { label: 'Expansion', data: expansion, backgroundColor: 'rgba(34,197,94,0.7)', borderWidth: 0, barPercentage: 1, categoryPercentage: 1 },
+        { label: 'Contraction', data: contraction, backgroundColor: 'rgba(239,68,68,0.7)', borderWidth: 0, barPercentage: 1, categoryPercentage: 1 },
+      ]
+    },
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: { legend: { display: false } },
+      scales: {
+        x: { display: false, stacked: true },
+        y: { display: false, stacked: true, beginAtZero: true },
+      }
+    }
+  });
+})();
+{% endif %}
+</script>
+{% endblock %}

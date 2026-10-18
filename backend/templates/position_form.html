@@ -1,0 +1,75 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="fade-in">
+  <p class="label"><a href="/os/positions" style="color: var(--text-tertiary);">← Positions</a></p>
+  <h1 class="headline">{{ 'Edit' if position else 'New' }} position</h1>
+  <p class="subhead">No thesis → no trade. Fill the ticket before it hits Groww.</p>
+
+  <form method="post" action="{{ '/os/positions/' + position.id if position else '/os/positions' }}" class="card">
+    <div class="form-grid">
+      <label>Instrument *
+        <input name="instrument" required value="{{ position.instrument if position else '' }}" placeholder="Nippon India Small Cap — Direct Growth">
+      </label>
+      <label>Asset class
+        <select name="asset_class">
+          {% for ac in ['mf', 'etf', 'stock'] %}
+          <option value="{{ ac }}" {% if position and position.asset_class == ac %}selected{% elif not position and ac == 'mf' %}selected{% endif %}>{{ ac }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>AMFI / scheme code
+        <input name="scheme_code" value="{{ position.scheme_code if position and position.scheme_code else '' }}" placeholder="For NAV lookup">
+      </label>
+      <label>Sector
+        <input name="sector" value="{{ position.sector if position else '' }}" placeholder="Banking / Auto / …">
+      </label>
+      <label>Sleeve
+        <select name="sleeve">
+          <option value="satellite" {% if not position or position.sleeve == 'satellite' %}selected{% endif %}>Satellite</option>
+          <option value="core" {% if position and position.sleeve == 'core' %}selected{% endif %}>Core</option>
+        </select>
+      </label>
+      <label>Units
+        <input name="units" type="number" step="any" value="{{ position.units if position else '0' }}">
+      </label>
+      <label>Invested ₹
+        <input name="invested_amount" type="number" step="any" value="{{ position.invested_amount if position else '0' }}">
+      </label>
+      <label>Entry date
+        <input name="entry_date" type="date" value="{{ position.entry_date[:10] if position and position.entry_date else '' }}">
+      </label>
+      <label>Horizon (months lo–hi)
+        <div style="display: flex; gap: var(--space-2);">
+          <input name="horizon_months_lo" type="number" value="{{ position.horizon_months_lo if position else 6 }}">
+          <input name="horizon_months_hi" type="number" value="{{ position.horizon_months_hi if position else 9 }}">
+        </div>
+      </label>
+      <label>Soft target return %
+        <input name="target_return_pct" type="number" step="any" value="{{ position.target_return_pct if position and position.target_return_pct is not none else '' }}">
+      </label>
+      <label>Stop loss %
+        <input name="stop_loss_pct" type="number" step="any" value="{{ position.stop_loss_pct if position else 12 }}">
+      </label>
+      <label>Take profit %
+        <input name="take_profit_pct" type="number" step="any" value="{{ position.take_profit_pct if position and position.take_profit_pct is not none else '' }}">
+      </label>
+      <label>Review date
+        <input name="review_date" type="date" value="{{ position.review_date[:10] if position and position.review_date else '' }}">
+      </label>
+      <label>Exit by
+        <input name="exit_by_date" type="date" value="{{ position.exit_by_date[:10] if position and position.exit_by_date else '' }}">
+      </label>
+      <label>Thesis invalid if
+        <input name="thesis_invalid_if" value="{{ position.thesis_invalid_if if position else '' }}" placeholder="e.g. contraction">
+      </label>
+    </div>
+    <label style="display: block; margin-top: var(--space-4);">Thesis *
+      <textarea name="thesis" required rows="4" placeholder="Why this bet, what success looks like, what kills it.">{{ position.thesis if position else '' }}</textarea>
+    </label>
+    <label style="display: block; margin-top: var(--space-3);">Notes
+      <textarea name="notes" rows="2">{{ position.notes if position else '' }}</textarea>
+    </label>
+    <button type="submit" class="btn" style="margin-top: var(--space-6);">{{ 'Save' if position else 'Create position' }}</button>
+  </form>
+</div>
+{% endblock %}

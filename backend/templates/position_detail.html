@@ -1,0 +1,152 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="fade-in">
+  <p class="label"><a href="/os/positions" style="color: var(--text-tertiary);">← Positions</a></p>
+  <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: var(--space-4); flex-wrap: wrap;">
+    <div>
+      <h1 class="headline">{{ p.instrument }}</h1>
+      <p class="subhead">{{ p.sector or '—' }} · {{ p.sleeve }} · {{ p.asset_class }}
+        · <span class="traffic traffic-{{ p.traffic }}">{{ p.status }}</span>
+      </p>
+    </div>
+    <a class="btn btn-sm" href="/os/positions/{{ p.id }}/edit" style="background: var(--bg-elevated); color: var(--text-primary); border: 0.5px solid var(--border);">Edit</a>
+  </div>
+
+  <div class="grid-2">
+    <div class="card">
+      <p class="label">Am I on track?</p>
+      <p style="font-size: 18px; font-weight: 600; margin-top: var(--space-2); color: {% if p.traffic == 'green' %}var(--green){% elif p.traffic == 'red' %}var(--red){% else %}var(--orange){% endif %};">
+        {{ p.next_action }}
+      </p>
+      <p style="font-size: 13px; color: var(--text-secondary); margin-top: var(--space-2);">
+        {% if p.horizon_progress < 0.35 %}
+        You are {{ (p.horizon_progress * 100)|round|int }}% through the planned horizon. Early underperformance is common for satellite tilts. Keep unless stop or thesis invalid.
+        {% elif p.traffic == 'red' %}
+        Past plan or risk rule. Decide: extend with a new thesis, trim, or square off on Groww.
+        {% else %}
+        Within horizon. Compare plan vs actual below before changing size.
+        {% endif %}
+      </p>
+    </div>
+    <div class="card">
+      <p class="label">Mark-to-market</p>
+      <p class="mono" style="font-size: 22px; font-weight: 600; margin-top: var(--space-2);">₹{{ "{:,.0f}".format(p.market_value) }}</p>
+      <p class="{% if p.pnl_pct >= 0 %}positive{% else %}negative{% endif %}" style="font-size: 14px;">
+        {{ "%+.1f"|format(p.pnl_pct) }}% (₹{{ "{:,.0f}".format(p.pnl) }})
+      </p>
+      <p style="font-size: 12px; color: var(--text-tertiary); margin-top: var(--space-2);">
+        {{ "%.4f"|format(p.units) }} units · NAV/price {{ p.last_nav or '—' }} · invested ₹{{ "{:,.0f}".format(p.invested_amount) }}
+      </p>
+    </div>
+  </div>
+
+  <div class="card">
+    <p class="label">Expectation frame</p>
+    <table style="margin-top: var(--space-3);">
+      <thead><tr><th></th><th>Plan</th><th>Actual</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Horizon</td>
+          <td>{{ p.horizon_months_lo }}–{{ p.horizon_months_hi }} months</td>
+          <td>Day {{ p.days_held }} of ~{{ p.horizon_months_hi * 30 }} ({{ (p.horizon_progress * 100)|round|int }}%)</td>
+        </tr>
+        <tr>
+          <td>Soft target</td>
+          <td>{% if p.target_return_pct %}{{ "%+.0f"|format(p.target_return_pct) }}%{% else %}—{% endif %}</td>
+          <td class="{% if p.pnl_pct >= 0 %}positive{% else %}negative{% endif %}">{{ "%+.1f"|format(p.pnl_pct) }}%</td>
+        </tr>
+        <tr>
+          <td>Stop</td>
+          <td>−{{ p.stop_loss_pct }}%</td>
+          <td>{{ "%+.1f"|format(p.pnl_pct) }}% from entry</td>
+        </tr>
+        <tr>
+          <td>Review / exit</td>
+          <td class="mono">{{ p.review_date or '—' }} / {{ p.exit_by_date or '—' }}</td>
+          <td>{{ p.next_action }}</td>
+        </tr>
+        <tr>
+          <td>Thesis still valid?</td>
+          <td colspan="2" style="font-size: 13px;">{{ p.thesis_invalid_if or '—' }}
+            {% if current_sub_phase %} · Pulse now: <span class="mono">{{ current_sub_phase }}</span>{% endif %}
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="card">
+    <p class="label">Thesis</p>
+    <p style="font-size: 14px; color: var(--text-secondary); margin-top: var(--space-2); white-space: pre-wrap;">{{ p.thesis or '—' }}</p>
+  </div>
+
+  {% if p.status != 'closed' %}
+  <div class="grid-2">
+    <form method="post" action="/os/positions/{{ p.id }}/reviewed" class="card">
+      <p class="label">Mark reviewed</p>
+      <p style="font-size: 13px; color: var(--text-secondary); margin: var(--space-2) 0;">Bumps next review +30 days.</p>
+      <button class="btn btn-sm" type="submit">Mark reviewed</button>
+    </form>
+    <form method="post" action="/os/positions/{{ p.id }}/extend" class="card">
+      <p class="label">Extend horizon</p>
+      <p style="font-size: 13px; color: var(--text-secondary); margin: var(--space-2) 0;">Push exit_by +90 days.</p>
+      <button class="btn btn-sm" type="submit" style="background: var(--bg-elevated); color: var(--text-primary); border: 0.5px solid var(--border);">Extend</button>
+    </form>
+  </div>
+
+  <div class="grid-2">
+    <form method="post" action="/os/positions/{{ p.id }}/nav" class="card">
+      <p class="label">Update NAV / price</p>
+      <div style="display: flex; gap: var(--space-2); margin-top: var(--space-3);">
+        <input name="nav" type="number" step="any" required placeholder="NAV or LTP" style="flex:1;">
+        <button class="btn btn-sm" type="submit">Update</button>
+      </div>
+      {% if p.scheme_code %}
+      <p style="font-size: 12px; color: var(--text-tertiary); margin-top: var(--space-2);">
+        Or <a href="/os/positions/{{ p.id }}/refresh-nav">fetch public NAV</a> ({{ p.scheme_code }})
+      </p>
+      {% endif %}
+    </form>
+    <form method="post" action="/os/positions/{{ p.id }}/close" class="card">
+      <p class="label">Close position</p>
+      <label style="display:block; margin-top: var(--space-2);">Exit NAV/price
+        <input name="exit_nav" type="number" step="any" required>
+      </label>
+      <label style="display:block; margin-top: var(--space-2);">Postmortem tags
+        <select name="outcome_tags">
+          <option value="thesis_right">thesis_right</option>
+          <option value="thesis_early">thesis_early</option>
+          <option value="thesis_wrong">thesis_wrong</option>
+          <option value="exited_late">exited_late</option>
+          <option value="exited_early">exited_early</option>
+        </select>
+      </label>
+      <label style="display:block; margin-top: var(--space-2);">Note
+        <input name="note" placeholder="One-line reason">
+      </label>
+      <button class="btn btn-sm" type="submit" style="margin-top: var(--space-3); background: var(--red);">Close</button>
+    </form>
+  </div>
+  {% endif %}
+
+  {% if transactions %}
+  <div class="card">
+    <p class="label">Transactions</p>
+    <table style="margin-top: var(--space-3);">
+      <thead><tr><th>Date</th><th>Type</th><th>Amount</th><th>Units</th><th>NAV</th></tr></thead>
+      <tbody>
+        {% for t in transactions %}
+        <tr>
+          <td class="mono">{{ t.tx_date }}</td>
+          <td>{{ t.tx_type }}</td>
+          <td>₹{{ "{:,.0f}".format(t.amount or 0) }}</td>
+          <td class="mono">{{ "%.4f"|format(t.units or 0) }}</td>
+          <td class="mono">{{ t.nav or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

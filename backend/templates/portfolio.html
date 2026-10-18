@@ -1,0 +1,147 @@
+{% extends "base.html" %}
+{% block content %}
+<div class="fade-in">
+  <p class="label">Portfolio</p>
+  <h1 class="headline">Your book</h1>
+  <p class="subhead">Mark-to-market from SIP ledger + public NAV. Groww is where you click buy/sell.</p>
+
+  <div class="grid-2">
+    <div class="card">
+      <p class="label">Total value</p>
+      <p class="mono" style="font-size: 28px; font-weight: 600; margin-top: var(--space-2);">₹{{ "{:,.0f}".format(summary.total_value) }}</p>
+      <p class="{% if summary.pnl >= 0 %}positive{% else %}negative{% endif %}">
+        {{ "%+.1f"|format(summary.pnl_pct) }}% · ₹{{ "{:,.0f}".format(summary.pnl) }}
+      </p>
+    </div>
+    <div class="card">
+      <p class="label">Core / satellite</p>
+      <p style="margin-top: var(--space-3); font-size: 14px;">
+        Core <strong>{{ summary.core_pct }}%</strong> (₹{{ "{:,.0f}".format(summary.core_value) }})
+      </p>
+      <p style="font-size: 14px; margin-top: var(--space-1);">
+        Satellite <strong>{{ summary.satellite_pct }}%</strong> (₹{{ "{:,.0f}".format(summary.satellite_value) }})
+      </p>
+      {% if summary.satellite_pct > 30 %}
+      <p style="font-size: 12px; color: var(--orange); margin-top: var(--space-3);">Satellite above ~30% — consider trimming tactical tilts.</p>
+      {% endif %}
+    </div>
+  </div>
+
+  <div style="display: flex; gap: var(--space-2); flex-wrap: wrap; margin-bottom: var(--space-4);">
+    <form method="post" action="/os/portfolio/refresh-nav">
+      <button class="btn btn-sm" type="submit">Refresh all MF NAVs</button>
+    </form>
+    <form method="post" action="/os/portfolio/process-sips">
+      <button class="btn btn-sm" type="submit" style="background: var(--bg-elevated); color: var(--text-primary); border: 0.5px solid var(--border);">Credit due SIPs</button>
+    </form>
+    <form method="post" action="/os/portfolio/snapshot">
+      <button class="btn btn-sm" type="submit" style="background: var(--bg-elevated); color: var(--text-primary); border: 0.5px solid var(--border);">Take snapshot</button>
+    </form>
+  </div>
+
+  {% if summary.by_sector %}
+  <div class="card">
+    <p class="label">By sector</p>
+    {% for sec, val in summary.by_sector.items() %}
+    <div class="alloc-bar" style="margin-top: var(--space-2);">
+      <span class="bar-label">{{ sec }}</span>
+      <div class="bar-track">
+        <div class="bar-fill bar-{{ loop.index0 % 10 }}" style="width: {{ (val / summary.total_value * 100) if summary.total_value else 0 }}%;">
+          {% if summary.total_value %}{{ (val / summary.total_value * 100)|round(1) }}%{% endif %}
+        </div>
+      </div>
+      <span class="bar-pct">₹{{ "{:,.0f}".format(val) }}</span>
+    </div>
+    {% endfor %}
+  </div>
+  {% endif %}
+
+  {% if positions %}
+  <div class="card">
+    <p class="label">Holdings</p>
+    <table style="margin-top: var(--space-3);">
+      <thead>
+        <tr><th>Instrument</th><th>Sleeve</th><th>Invested</th><th>Value</th><th>P&amp;L</th><th>Weight</th></tr>
+      </thead>
+      <tbody>
+        {% for p in positions %}
+        <tr>
+          <td><a href="/os/positions/{{ p.id }}">{{ p.instrument }}</a></td>
+          <td>{{ p.sleeve }}</td>
+          <td class="mono">₹{{ "{:,.0f}".format(p.invested_amount) }}</td>
+          <td class="mono">₹{{ "{:,.0f}".format(p.market_value) }}</td>
+          <td class="{% if p.pnl_pct >= 0 %}positive{% else %}negative{% endif %}">{{ "%+.1f"|format(p.pnl_pct) }}%</td>
+          <td class="mono">{% if summary.total_value %}{{ (p.market_value / summary.total_value * 100)|round(1) }}%{% else %}—{% endif %}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% endif %}
+
+  {% if snapshots %}
+  <div class="card">
+    <p class="label">Growth (snapshots)</p>
+    <div class="chart-wrap" style="margin-top: var(--space-3);">
+      <canvas id="growthChart" height="120"></canvas>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <p class="label">CAS reconcile (quarterly)</p>
+    <p style="font-size: 13px; color: var(--text-secondary); margin: var(--space-2) 0;">
+      Download one CAS from <a href="https://www.mfcentral.com" target="_blank" rel="noopener">MF Central</a>, then set true units + NAV per fund to fix drift.
+    </p>
+    <form method="post" action="/os/portfolio/reconcile" class="form-grid">
+      <label>Position
+        <select name="position_id" required>
+          {% for p in positions %}
+          <option value="{{ p.id }}">{{ p.instrument }}</option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>True units
+        <input name="units" type="number" step="any" required>
+      </label>
+      <label>NAV
+        <input name="nav" type="number" step="any" required>
+      </label>
+      <label>Invested ₹ (optional)
+        <input name="invested_amount" type="number" step="any">
+      </label>
+      <button class="btn btn-sm" type="submit">Reconcile</button>
+    </form>
+  </div>
+</div>
+{% endblock %}
+{% block scripts %}
+{% if snapshots %}
+<script>
+const labels = {{ snapshots | map(attribute='snapshot_date') | list | tojson }};
+const values = {{ snapshots | map(attribute='total_value') | list | tojson }};
+new Chart(document.getElementById('growthChart'), {
+  type: 'line',
+  data: {
+    labels,
+    datasets: [{
+      label: 'Portfolio value',
+      data: values,
+      borderColor: 'hsl(211 100% 50%)',
+      backgroundColor: 'rgba(10, 132, 255, 0.12)',
+      fill: true,
+      tension: 0.25,
+      pointRadius: 2,
+    }]
+  },
+  options: {
+    plugins: { legend: { display: false } },
+    scales: {
+      x: { ticks: { color: '#8e8e93', maxTicksLimit: 8 }, grid: { color: 'rgba(255,255,255,0.04)' } },
+      y: { ticks: { color: '#8e8e93' }, grid: { color: 'rgba(255,255,255,0.04)' } }
+    }
+  }
+});
+</script>
+{% endif %}
+{% endblock %}
